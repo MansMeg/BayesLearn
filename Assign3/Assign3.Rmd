@@ -1,0 +1,194 @@
+% Bayesian learning: Assignment 3
+% Måns Magnusson;Josef Wilzén
+% November 2012
+```{r startchunk,echo=FALSE,message=FALSE}
+# Options
+options(width=65)
+
+# Libraries
+library(ggplot2)
+library(pander)
+library(mvtnorm)
+library(geoR)
+library(msm)
+
+
+```
+
+```{r "Read data",echo=FALSE}
+# Read data
+setwd("~/Desktop/BayesLearn/Assign3")
+data<-read.table("CanadianWages.dat",header=T)
+```
+
+# Question 1)
+## Question 1a)
+The gibbs sampler were implemented in `r R.version$version.string` as a function. The function implemented coded in `R` looks as follows.
+
+```{r "Gibbs sampler (function)",echo=TRUE}
+gibbS<-function(y,prior,start.val=c(0,1),sim=1000){
+  # Parameter matrix c("mu","sigma")
+  pardraws<-matrix(0,nrow=sim,ncol=2)
+  # Starting values
+  pardraws[1,]<-start.val
+  # Calculating values that will be used many times
+  small_n<-length(y)
+  ymean<-mean(y)
+  nu_n<-small_n + prior[3]
+
+  # The Gibbs sampler
+    for (i in 2:sim){
+    # Calculate tau_n and mu_n
+    tau_n2<-1/((1/prior[2]^2) + (small_n/pardraws[i-1,2]^2))
+    mu_n<-((1/prior[2]^2)*prior[1]+(small_n/pardraws[i-1,2]^2)*ymean)*tau_n2
+    # Draw one sample of mu
+    pardraws[i,1]<-rnorm(1,mu_n,sqrt(tau_n2))
+    # Calculate sig_n
+    sig_n<-(prior[3]*prior[4]^2 + sum((y-pardraws[i,1])^2))/nu_n
+    # Draw one sample of sig_n
+    pardraws[i,2]<-sqrt(rinvchisq(1,nu_n,sig_n))
+    }
+  pardraws<-as.data.frame(pardraws)
+  return(pardraws)
+}
+```
+
+## Question 1b)
+```{r "Setting prior",echo=FALSE}
+# Prior vector (mu_0, tau_0, nu_0, sig_0)
+prior<-c(12,1000,1,2)
+```
+
+The dataset `CanadianWages.dat` were loaded into R as the dataset `data`. To draw samples from the posterior distribution. In the model the prior values were set to $\mu_0=$ `r prior[1]`, $\tau_0=$ `r prior[2]`, $\nu_0=$ `r prior[3]` and $\sigma_0=$ `r prior[4]`.
+Since these values are the prior beliefs the starting values is set to the same prior beliefs of $\mu_0$ and $\sigma_0$.
+
+
+```{r "Setting parameters for the GibbS function"}
+# Parameters for the gibbS function
+sim<-5000 # Number of simulations
+y<-data[,1]
+start.val<-c(prior[1],prior[4]) 
+
+```
+
+Based on these prior values as starting values (`r start.val`) the `gibbS` function is used by drawing `r formatC(sim,digits=0,format="f")` draws from the posterior.
+
+```{r "Sampling",echo=TRUE}
+res1<-gibbS(y=y,prior=prior,start.val=start.val,sim=sim)
+```
+
+The mixing behaviour of $\mu_n$ and $\sigma_n$ can be seen in the following two figures.
+
+```{r "Plot mixing distributions",echo=FALSE,fig.height=3.5,echo=FALSE}
+mix.plot1 <- ggplot(data=res1, aes(x=1:dim(res1)[1], y=res1[,1])) +
+    geom_line() +
+    ggtitle(expression(paste("Mixing for ",mu[n])))
+mix.plot1 <- update_labels(mix.plot1, list(x = "draw", y = expression(mu[n])))
+
+mix.plot2 <- ggplot(data=res1, aes(x=1:dim(res1)[1], y=res1[,2])) +
+    geom_line() +
+    ggtitle(expression(paste("Mixing for ",sigma[n]^2)))
+mix.plot2 <- update_labels(mix.plot2, list(x = "draw", y = expression(sigma[n]^2)))
+
+mix.plot1
+mix.plot2
+
+```
+
+It is apparent that the two paramater distributions starts to mix almost directly based on the  starting values above.
+
+# Question 2
+## Question 2a)
+As a first step the part of the code defining $\tau$ is "commented" away som these paramaters can be chosen "outside" the code. The output from the file was also changed to enable printing `Rmd`-tables. The new code is called `MainOptimizeSpamMansJosef.R`. 
+In this question $\tau$ is changed to `10` and the code is sourced as can bee seen in the following code.
+
+```{r "Source Mattias code"}
+Probit <- 0
+chooseCov <- c(1:16)
+tau <- 10
+source("MainOptimizeSpamMansJosef.R")
+```
+
+The modes of the resulting posteriors together with the posterior standard deviation can be seen in the following table.
+
+```{r "Printing table",echo=FALSE,results='asis'}
+pandoc.table(round(res.post.draw,4),style="simple",caption="Posterior modes and sd")
+```
+
+## Question 2b)
+The probit model were implemented in `R` the following way as function called `gibbSprobit`.
+
+```{r "Gibbs sampler probit (function)",echo=TRUE}
+gibbSprobit<-function(y,X,tau,v0=1,sigma0=1,beta0=NULL,sim=1000){
+
+  # Parameter matrix c("beta.vec")
+  p.no <- dim(X)[2]
+  pardraws<-matrix(0,nrow=sim,ncol=p.no)
+  
+  # Starting values (given by linear regression)
+  pardraws[1,]<-t(solve(t(X)%*%X)%*%t(X)%*%y)
+
+  # Defining prior values
+  omega0<-tau^2 * diag(p.no)
+  if(is.null(beta0)) beta0<-numeric(p.no)
+  
+  for (i in 2:sim){
+    # u_i given beta ,y i<-2
+    # Since the u vector is not of further intrest, these values is not saved
+    # Draw sample of u.vec
+    u.vec<-rtnorm(n=length(y),
+                  mean=X%*%pardraws[i-1,],
+                  sd=1,
+                  lower=ifelse(y==1,0,-Inf),
+                  upper=ifelse(y==0,0,Inf))
+    # beta given u,y
+    # Calculate hyperparameters
+    betahat <- solve(t(X)%*%X)%*%t(X)%*%u.vec
+    betaN <- solve((t(X) %*% X + omega0)) %*% (t(X) %*% X %*% betahat + omega0 %*% beta0)
+    omegaN <- (t(X) %*% X + omega0)
+    vN <- v0 + dim(X)[1]
+    sigmaN <- (v0 * sigma0^2 + (t(u.vec) %*% u.vec + t(beta0) %*% omega0 %*% beta0 - t(betaN) %*% omegaN %*% betaN))/vN
+    
+    # Draw sample of \beta
+    pardraws[i,]<-mvrnorm(1,mu=betaN,Sigma=as.numeric(sigmaN^2)*solve(omegaN))
+  }
+  pardraws<-as.data.frame(pardraws)
+  colnames(pardraws)<-colnames(X)
+  return(pardraws)
+}
+```
+
+## Question 2c)
+Based on the function above `r formatC(sim,digits=0,format="f")` draws from the posterior were drawn. This code was not as effective as the earlier code and of this reason it took much longer to simulate from the psoterior.
+
+```{r "Drawing samples from probit model"}
+res2<-gibbSprobit(y,X,tau,v0=1,sigma0=1,beta0=NULL,sim=sim)
+
+```
+
+The mixing behaviour of the $\beta$ were studied using graphical methods. As we can see the mixing behaviour (in the appendix) of some of the $\beta$ do not suggest that the draws from the posterior is independent. This is especially true for $\beta_9$ , $\beta_{12}$ and $\beta_{13}$ .
+Of this reason it is hard to be able to draw conclusions f sample when it comes to the mode and sd of the mode of the distribution.
+
+## Question 2d)
+```{r,echo=FALSE,results='asis'}
+comp.table<-data.frame(V1=res.post.draw[,1],V2=colMeans(res2),V3=res.post.draw[,2],V4=sqrt(diag(var(res2))))
+names(comp.table)<-c("mode.logit","mean.probit","sd.logit","sd.probit")
+pandoc.table(round(comp.table,4),style="simple",caption="Posterior modes/mean and sd for logit and probit model")
+```
+
+As we can see there is quite a difference between the $\beta$:s in the logitic model and in the probit model. This is of course expected since the parametrisation of the model is different and the intepretation of the different $\beta$:s is different as well.
+
+# Appendix
+Mixing behaviour for different $beta_1$ to $beta_16$ in the probit model.
+```{r ,echo=FALSE,fig.height=2.8,echo=FALSE}
+old.mar<-par()$mar
+par(mar=c(4.1,4.1,1.1,1.1))
+for(j in 1:16){
+  y.label<-substitute(beta[k],list(k=j))
+  plot(res2[,j],type="l",ylab=y.label)
+  abline(a=0,b=0,col="red")
+}
+par(mar=old.mar)
+```
+
+
