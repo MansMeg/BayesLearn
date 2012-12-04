@@ -179,7 +179,8 @@ pandoc.table(round(comp.table,4),style="simple",caption="Posterior modes/mean an
 As we can see there is quite a difference between the $\beta$:s in the logitic model and in the probit model. This is of course expected since the parametrisation of the model is different and the intepretation of the different $\beta$:s is different as well.
 
 # Appendix
-Mixing behaviour for different $beta_1$ to $beta_16$ in the probit model.
+Mixing behaviour for different $\beta_1$ to $\beta_{16}$ in the probit model.
+
 ```{r ,echo=FALSE,fig.height=2.8,echo=FALSE}
 old.mar<-par()$mar
 par(mar=c(4.1,4.1,1.1,1.1))
