@@ -1,0 +1,1417 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\begin_modules
+knitr
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Bayesian Learning I
+\begin_inset Newline newline
+\end_inset
+
+Computer exercise 2
+\end_layout
+
+\begin_layout Author
+Josef Wilzén och Måns Magnusson
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=FALSE,message=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+options(width=55)
+\end_layout
+
+\begin_layout Plain Layout
+
+library(mvtnorm)
+\end_layout
+
+\begin_layout Plain Layout
+
+library(geoR)
+\end_layout
+
+\begin_layout Plain Layout
+
+library(MASS)
+\end_layout
+
+\begin_layout Plain Layout
+
+library(xtable)
+\end_layout
+
+\begin_layout Plain Layout
+
+path<-"/Users/mansmagnusson/Desktop/BayesLearn/Assign2" 
+\end_layout
+
+\begin_layout Plain Layout
+
+setwd(path) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#dir() 
+\end_layout
+
+\begin_layout Plain Layout
+
+JapanData<-read.table("JapanTemp.dat",header=T) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+Y<-JapanData[,2] 
+\end_layout
+
+\begin_layout Plain Layout
+
+X<-matrix(1,dim(JapanData)[1],3) 
+\end_layout
+
+\begin_layout Plain Layout
+
+X[,2]<-JapanData[,1] 
+\end_layout
+
+\begin_layout Plain Layout
+
+X[,3]<-JapanData[,1]^2
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+prior.title<-""
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1a)
+\end_layout
+
+\begin_layout Standard
+The hyperparameters of the model were identified in the following way.
+ The prior for the 
+\begin_inset Formula $\beta$
+\end_inset
+
+:s in the model were set using the some initial, assumed value for the japanese
+ temperatures during over one year.
+ The fictional values each month were defined to be the following values.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# One X for each month 
+\end_layout
+
+\begin_layout Plain Layout
+
+GuessX<-seq(0,1,length=12) 
+\end_layout
+
+\begin_layout Plain Layout
+
+# Guessed temperatures each month
+\end_layout
+
+\begin_layout Plain Layout
+
+GuessY<-c(-5,1,5,14,18,24,27,28,20,15,10,1)   
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These values were then used to fit a least squares model to the guessed
+ values to produce the prior hyperparameter 
+\begin_inset Formula $\mathbf{\mu}_{0}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# Estimated values for mu0
+\end_layout
+
+\begin_layout Plain Layout
+
+mu0.mod<-lm(GuessY~GuessX+I(GuessX^2))
+\end_layout
+
+\begin_layout Plain Layout
+
+# Hyperparamater mu0
+\end_layout
+
+\begin_layout Plain Layout
+
+mu0<-mu0.mod$coef
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The hyperparameter 
+\begin_inset Formula $\mu_{0}$
+\end_inset
+
+ is in this way set to the following values (
+\begin_inset Flex S/R expression
+status collapsed
+
+\begin_layout Plain Layout
+
+mu0
+\end_layout
+
+\end_inset
+
+).
+ Plotting the guessed values for 
+\begin_inset Formula $Y\mid X$
+\end_inset
+
+ and the prior for the 
+\begin_inset Formula $\beta$
+\end_inset
+
+ vector gives the following prior model for the Japanese temperatures.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=FALSE,fig=T,fig.height=3.5>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# Plot with fitted values for prior coefficents: 
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(GuessX,GuessY,ylim=c(-10,30), main=expression(paste("Prior for ",mu[0])))
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+points(GuessX,fitted(mu0.mod),type="l",col="red")
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To guess a good value for the sigma, tha same model of guessed values for
+ 
+\begin_inset Formula $Y$
+\end_inset
+
+ were used as above and the residual sum of squares in this model were used
+ as a prior for 
+\begin_inset Formula $\sigma$
+\end_inset
+
+.
+ This way 
+\begin_inset Formula $\sigma_{0}$
+\end_inset
+
+ were set to 
+\begin_inset Flex S/R expression
+status collapsed
+
+\begin_layout Plain Layout
+
+sigma0<-sqrt((sum(residuals(mu0.mod)^2)/9))
+\end_layout
+
+\end_inset
+
+ The hyperparamaters 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+ were set to the identity matrix of size 3 (assuming independence for 
+\begin_inset Formula $\beta$
+\end_inset
+
+:s) and 
+\begin_inset Formula $\nu_{0}$
+\end_inset
+
+, the precision of 
+\begin_inset Formula $\sigma_{0}$
+\end_inset
+
+ were set to an arbitrary small number of 1.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+sigma0<-sqrt((sum(residuals(mu0.mod)^2)/9)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+omega0<-diag(1,3) 
+\end_layout
+
+\begin_layout Plain Layout
+
+v0<-1
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Set seed for the following simulations
+\end_layout
+
+\begin_layout Plain Layout
+
+set.seed(20121127)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1b)
+\end_layout
+
+\begin_layout Standard
+Based on these hyperparameters a prior distribution for the regression line
+ (or the 
+\begin_inset Formula $\beta$
+\end_inset
+
+ parameters) were calculated in the following way.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<DRAWSPRIOR>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+sim.no<-1000
+\end_layout
+
+\begin_layout Plain Layout
+
+steps<-10
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Simulate prior
+\end_layout
+
+\begin_layout Plain Layout
+
+prior.sim<-matrix(0,nrow=sim.no,ncol=5) 
+\end_layout
+
+\begin_layout Plain Layout
+
+prior.sim[,1]<-rinvchisq(sim.no, df=v0, scale = sigma0) 
+\end_layout
+
+\begin_layout Plain Layout
+
+for(i in 1:sim.no){   
+\end_layout
+
+\begin_layout Plain Layout
+
+prior.sim[i,2:4]<-mvrnorm(mu=mu0,Sigma=prior.sim[i,1]*omega0,1)}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Produce prior regression curve
+\end_layout
+
+\begin_layout Plain Layout
+
+temp.curve<-matrix(0,nrow=sim.no,ncol=2) 
+\end_layout
+
+\begin_layout Plain Layout
+
+for (i in 0:steps){   
+\end_layout
+
+\begin_layout Plain Layout
+
+temp.curve[,2]<-i/steps   
+\end_layout
+
+\begin_layout Plain Layout
+
+temp.curve[,1]<-prior.sim[,2]+prior.sim[,3]*temp.curve[,2]+prior.sim[,4]*temp.curve[,2
+]^2  
+\end_layout
+
+\begin_layout Plain Layout
+
+if(i==0){prior.curve<-temp.curve}else{prior.curve<-rbind(prior.curve,temp.curve)}
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Initially the hyperparamater 
+\begin_inset Formula $\text{\nu}_{0}$
+\end_inset
+
+ were confused with the variance, and not the precision of the paramater.
+ So it were initially set to 70, but after plotting the prior 
+\begin_inset Quotes eld
+\end_inset
+
+distribution
+\begin_inset Quotes erd
+\end_inset
+
+ of the regression lines, the value of 
+\begin_inset Formula $\nu_{0}$
+\end_inset
+
+ were set to 1.
+ The 
+\begin_inset Quotes eld
+\end_inset
+
+prior
+\begin_inset Quotes erd
+\end_inset
+
+ of the regression lines can bee seen in the following figure.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<PRIORPLOT,fig=TRUE,fig.height=3.5,echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+prior.title<-   
+\end_layout
+
+\begin_layout Plain Layout
+
+eval(substitute(     
+\end_layout
+
+\begin_layout Plain Layout
+
+expression(paste("Prior with ",mu[0],"= (",muNULL,"), ",nu[0],"= ",nuNULL,"
+ and ",sigma[0],"= ",sigmaNULL)),
+\end_layout
+
+\begin_layout Plain Layout
+
+list(muNULL = paste(round(mu0,1),collapse=", "),          
+\end_layout
+
+\begin_layout Plain Layout
+
+nuNULL = v0,          
+\end_layout
+
+\begin_layout Plain Layout
+
+sigmaNULL = round(sigma0,2))))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+pri.cont<-prior.curve[prior.curve[,1]<100&prior.curve[,1]>-50,] 
+\end_layout
+
+\begin_layout Plain Layout
+
+contour(kde2d(x=pri.cont[,2],pri.cont[,1],n=100,lims=c(0,1,-20,50)),main=prior.titl
+e)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Som more studies were done regarding the hyperparamaters effect on the prior
+ 
+\begin_inset Quotes eld
+\end_inset
+
+regression curve
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Different paramaters were tested with the following results.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=TRUE,fig.height=3.5,echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# New Hyperparameters
+\end_layout
+
+\begin_layout Plain Layout
+
+sigma0<-30 
+\end_layout
+
+\begin_layout Plain Layout
+
+v0<-1
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<<DRAWSPRIOR>>
+\end_layout
+
+\begin_layout Plain Layout
+
+<<PRIORPLOT>>
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# New Hyperparameters
+\end_layout
+
+\begin_layout Plain Layout
+
+sigma0<-sqrt((sum(residuals(mu0.mod)^2)/9)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+v0<-100
+\end_layout
+
+\begin_layout Plain Layout
+
+<<DRAWSPRIOR>>
+\end_layout
+
+\begin_layout Plain Layout
+
+<<PRIORPLOT>>
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+sigma0<-30 
+\end_layout
+
+\begin_layout Plain Layout
+
+v0<-1
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Based on these results, the final hyper paramaters were set to 
+\begin_inset Formula $\mu_{0}=(\Sexpr{round(mu0,2)}),\nu_{0}=\Sexpr{v0}\text{ and }\sigma_{0}=\Sexpr{sigma0}$
+\end_inset
+
+.
+ 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+ were set to the identity matrix.
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1c)
+\end_layout
+
+\begin_layout Standard
+The posterior distribution were derived the following way in R.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<POSTERIOR>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+BetaHat<-lm(Y~time +I(time ^2),data=JapanData)$coefficients
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Derive posterior values
+\end_layout
+
+\begin_layout Plain Layout
+
+muN<-solve((t(X)%*%X+omega0))%*%(t(X)%*%X%*%BetaHat+omega0%*%mu0)   
+\end_layout
+
+\begin_layout Plain Layout
+
+omegaN<-(t(X)%*%X+omega0) 
+\end_layout
+
+\begin_layout Plain Layout
+
+vN<-v0+dim(X)[1] 
+\end_layout
+
+\begin_layout Plain Layout
+
+sigmaN<-(v0*sigma0^2+(t(Y)%*%Y+t(mu0)%*%omega0%*%mu0-t(muN)%*%omegaN%*%muN))/v0
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This result in the posterior hyperparamater values of 
+\begin_inset Formula $\mu_{n}=(\Sexpr{round(muN,2)}),\nu_{n}=\Sexpr{vN}\text{ and }\sigma_{n}^{2}=\Sexpr{sigmaN}$
+\end_inset
+
+.
+ The matrix 
+\begin_inset Formula $\Omega_{n}$
+\end_inset
+
+ can be seen below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+omegaN
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To do the sensitivity analysis different values were tried for 
+\begin_inset Formula $\mu_{0},\nu_{0}$
+\end_inset
+
+ and 
+\begin_inset Formula $\sigma_{0}$
+\end_inset
+
+.
+ Eight different combinations were tried as the sensitivity analysis.
+ To try the different values of 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+ the different studied values on 
+\begin_inset Formula $\nu_{0}$
+\end_inset
+
+ were multiplied with the identity matrix to sttudy different priors on
+ 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+.
+ The different prior values can be seen in table 1 below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+nu<-c(0.01,1,100)
+\end_layout
+
+\begin_layout Plain Layout
+
+sigm<-c(sqrt((sum(residuals(mu0.mod)^2)/9)),sigma0)
+\end_layout
+
+\begin_layout Plain Layout
+
+beta_val<-c(0,0,0,mu0)
+\end_layout
+
+\begin_layout Plain Layout
+
+omeg<-omega0
+\end_layout
+
+\begin_layout Plain Layout
+
+res<-matrix(0,nrow=12,ncol=10)
+\end_layout
+
+\begin_layout Plain Layout
+
+l<-1
+\end_layout
+
+\begin_layout Plain Layout
+
+for (i in 1:2){
+\end_layout
+
+\begin_layout Plain Layout
+
+	for (j in 1:3){
+\end_layout
+
+\begin_layout Plain Layout
+
+		for (k in 1:2){
+\end_layout
+
+\begin_layout Plain Layout
+
+		sigma0<-sigm[i] 
+\end_layout
+
+\begin_layout Plain Layout
+
+		v0<-nu[j]
+\end_layout
+
+\begin_layout Plain Layout
+
+		mu0<-beta_val[(1:3)+(k-1)*3]
+\end_layout
+
+\begin_layout Plain Layout
+
+		omega0<-omeg*v0
+\end_layout
+
+\begin_layout Plain Layout
+
+		<<POSTERIOR>>
+\end_layout
+
+\begin_layout Plain Layout
+
+		res[l,]<-c(sigma0,v0,mu0,sqrt(sigmaN),vN,muN)
+\end_layout
+
+\begin_layout Plain Layout
+
+		l<-l+1
+\end_layout
+
+\begin_layout Plain Layout
+
+		}
+\end_layout
+
+\begin_layout Plain Layout
+
+	}
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+res<-as.data.frame(res)
+\end_layout
+
+\begin_layout Plain Layout
+
+names(res)<-paste(c("sigma","nu",paste("beta",0:2,sep="")),c(rep("_0",5),rep("_n
+",5)),sep="")
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<results=tex,echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+xtable(res[,1:5],caption="Prior hyperparameter values",digits=2)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Based on these prior values the following posterior values were calculated
+ for each setup of prior values.
+ The result can bee seen in table 2 below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<results=tex,echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+xtable(res[,6:10],caption="Posterior hyperparameter values",digits=1)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1d)
+\end_layout
+
+\begin_layout Standard
+A program/function to simulate from the posterior were implemented i R the
+ following way.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+sigma0<-sqrt((sum(residuals(mu0.mod)^2)/9)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+omega0<-diag(1,3) 
+\end_layout
+
+\begin_layout Plain Layout
+
+v0<-1
+\end_layout
+
+\begin_layout Plain Layout
+
+mu0<-mu0.mod$coef
+\end_layout
+
+\begin_layout Plain Layout
+
+<<POSTERIOR>>
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+myRegPost<-function(no.sample,muVect,covMat,v,sigma){
+\end_layout
+
+\begin_layout Plain Layout
+
+myPosterior<-matrix(0,no.sample,4)
+\end_layout
+
+\begin_layout Plain Layout
+
+myPosterior[,1]<-rinvchisq(no.sample, df=v, scale =sigma)  
+\end_layout
+
+\begin_layout Plain Layout
+
+for(i in 1:no.sample){
+\end_layout
+
+\begin_layout Plain Layout
+
+covariance<-myPosterior[i,1]*solve(covMat)
+\end_layout
+
+\begin_layout Plain Layout
+
+myPosterior[i,2:4]<-rmvnorm(n=1, mean=muVect, sigma=covariance)}
+\end_layout
+
+\begin_layout Plain Layout
+
+myPosterior<-as.data.frame(myPosterior)
+\end_layout
+
+\begin_layout Plain Layout
+
+names(myPosterior)<-c("sigma","beta0","beta1","beta2")
+\end_layout
+
+\begin_layout Plain Layout
+
+return(myPosterior) 
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+postDF<-myRegPost(sim.no,muN,omegaN,vN,sigmaN)
+\end_layout
+
+\begin_layout Plain Layout
+
+head(postDF)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1e)
+\end_layout
+
+\begin_layout Standard
+The maximum time point for each date can be found using the first derivative
+ set to 0.
+ This gives the maximum, 
+\begin_inset Formula $\tilde{x}$
+\end_inset
+
+, to be:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial f(x)}{\partial x}=\beta_{1}+2\beta_{2}x=0\Leftrightarrow\tilde{x}=-\frac{\beta_{1}}{2\beta_{2}},\text{ if }\frac{\partial^{2}f(x)}{\partial^{2}x}<0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This were implemented in R and plotted.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+postDF$xmax<-with(postDF,-(beta1)/(2*beta2))
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=TRUE,fig.height=4,echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(density(postDF$xmax),
+\end_layout
+
+\begin_layout Plain Layout
+
+ylab="Density",
+\end_layout
+
+\begin_layout Plain Layout
+
+xlab=expression(tilde(x),xlim=c(-1,2)),
+\end_layout
+
+\begin_layout Plain Layout
+
+main=expression(paste("Posterior of ",tilde(x),sep="")))
+\end_layout
+
+\begin_layout Plain Layout
+
+with(postDF,plot(beta1,beta2,
+\end_layout
+
+\begin_layout Plain Layout
+
+ylab=expression(beta[2]),
+\end_layout
+
+\begin_layout Plain Layout
+
+xlab=expression(beta[1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As we can see from the figure, the estimate of 
+\begin_inset Formula $\tilde{x}$
+\end_inset
+
+ is quite unstable.
+ The reason for this is that the posterior for 
+\begin_inset Formula $\beta_{2}$
+\end_inset
+
+ is including 0 (and positive values) and 
+\begin_inset Formula $\beta_{1}$
+\end_inset
+
+ is including 0 (and negative values) as is shown in the second figure above.
+ This means that the estimate of 
+\begin_inset Formula $\tilde{x}$
+\end_inset
+
+ can be outside the range [0,1] of the 
+\begin_inset Formula $x$
+\end_inset
+
+ variable.
+ To correct this problem we can either limit the prior to negative values
+ on 
+\begin_inset Formula $\beta_{2}$
+\end_inset
+
+ and positive values for 
+\begin_inset Formula $\beta_{1}$
+\end_inset
+
+ (assuming that there should be a summer with maximum temperature in Japan)
+ or include sinus and cosinus function so the cyclical behaviour of the
+ weather is included in the model (hence discarding the polynomial model).
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1f)
+\end_layout
+
+\begin_layout Standard
+This can be done by using another prior for the 
+\begin_inset Formula $\beta$
+\end_inset
+
+:s, namely setting the prior of 
+\begin_inset Formula $\mu_{0}$
+\end_inset
+
+ to 0 for 
+\begin_inset Formula $\beta_{3}-\beta_{7}$
+\end_inset
+
+ and using a more informative prior of 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+ for the last (probably unnecessary)
+\begin_inset Formula $\beta$
+\end_inset
+
+:s.
+ For example using the following prior 
+\begin_inset Formula $\Omega_{0}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+c(1,1,1,rep(100,5))*diag(8)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

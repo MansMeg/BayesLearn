@@ -1,0 +1,1187 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\begin_modules
+knitr
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Bayesian Learning I
+\begin_inset Newline newline
+\end_inset
+
+Computer exercise 1
+\end_layout
+
+\begin_layout Author
+Josef Wilzén och Måns Magnusson
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=FALSE>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+options(width=50)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1a)
+\end_layout
+
+\begin_layout Standard
+Random numbers drawn from the posterior 
+\begin_inset Formula $\theta\mid\mathbf{x}\sim Beta(\alpha+s,|\beta+f)$
+\end_inset
+
+ and 
+\begin_inset Formula $E(\theta)$
+\end_inset
+
+ together with 
+\begin_inset Formula $\sqrt{V(\theta)}$
+\end_inset
+
+ i s calculated in R.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+set.seed(20121113)
+\end_layout
+
+\begin_layout Plain Layout
+
+a2<-(2+14) 
+\end_layout
+
+\begin_layout Plain Layout
+
+b2<-(2+6)   
+\end_layout
+
+\begin_layout Plain Layout
+
+myDraw1<-rbeta(1000,a2,b2) 
+\end_layout
+
+\begin_layout Plain Layout
+
+mean(myDraw1) 
+\end_layout
+
+\begin_layout Plain Layout
+
+sd(myDraw1) 
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The theoretical result for the Beta distribution is calculated the following
+ way, and as we can see the results are similar.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# E(theta)
+\end_layout
+
+\begin_layout Plain Layout
+
+thMean<-a2/(a2+b2)
+\end_layout
+
+\begin_layout Plain Layout
+
+thMean
+\end_layout
+
+\begin_layout Plain Layout
+
+# sd(theta)
+\end_layout
+
+\begin_layout Plain Layout
+
+thSD<-sqrt(a2*b2/((a2+b2)^2*(a2+b2+1)))
+\end_layout
+
+\begin_layout Plain Layout
+
+thSD
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The whole distribution can bee seen in the following histogram.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=F,fig=T>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+hist(myDraw1,50)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To test the theory we constructed the following function.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+testOfTheory<-function(alfa, beta,testNo){
+\end_layout
+
+\begin_layout Plain Layout
+
+myResult<-matrix(0,testNo,2)   
+\end_layout
+
+\begin_layout Plain Layout
+
+for(i in 1:testNo){
+\end_layout
+
+\begin_layout Plain Layout
+
+myDrawI<-rbeta(i,alfa,beta)
+\end_layout
+
+\begin_layout Plain Layout
+
+myResult[i,1]<-mean(myDrawI)
+\end_layout
+
+\begin_layout Plain Layout
+
+myResult[i,2]<-sd(myDrawI)   
+\end_layout
+
+\begin_layout Plain Layout
+
+}   
+\end_layout
+
+\begin_layout Plain Layout
+
+return(myResult)} 
+\end_layout
+
+\begin_layout Plain Layout
+
+myResult<-testOfTheory(16,8,2000)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This function were used to produce the following plots to show the effect
+ of incresing sample size.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=T,echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(2,1))
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(myResult[,1], main="Mean",ylab="Sample mean",xlab="No.
+ of obs.
+ in sample",type="l")
+\end_layout
+
+\begin_layout Plain Layout
+
+abline(a=thMean,b=0,col="red")   
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(myResult[,2], main="Standard deviation",ylab="Sample Standard deviation",xl
+ab="No.
+ of obs.
+ in sample",type="l")
+\end_layout
+
+\begin_layout Plain Layout
+
+abline(a=thSD,b=0,col="red") 
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(1,1)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1b)
+\end_layout
+
+\begin_layout Standard
+The posterior distribution 
+\begin_inset Formula $Pr(\theta<0.01|\mathbf{x})$
+\end_inset
+
+ were calculated using simulation in R.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+betaPostProb<-function(alfa,beta,noDraw,myQuan){
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes<-matrix(0,noDraw,2)
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes[,1]<-rbeta(noDraw,alfa,beta)
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes[,2]<-ifelse(myRes[,1]<myQuan,1,0)
+\end_layout
+
+\begin_layout Plain Layout
+
+print(mean(myRes[,2]))
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+betaPostProb(16,8,10000,myQuan=0.01)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The value of 
+\begin_inset Formula $Pr(\theta<0.01|\mathbf{x})$
+\end_inset
+
+ were calculated 
+\begin_inset Quotes eld
+\end_inset
+
+theoretically
+\begin_inset Quotes erd
+\end_inset
+
+ in R.
+ As we see below from the theoretical results, the probability 
+\begin_inset Formula $Pr(\theta<0.01|\mathbf{x})$
+\end_inset
+
+ is so small that a lot more simualtions is needed to get any 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\theta<0.01$
+\end_inset
+
+ in the posterior distribution using simulation.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+pbeta(0.01,16,8)
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 1c)
+\end_layout
+
+\begin_layout Standard
+The posterior distribution of the log-odds, 
+\begin_inset Formula $\phi=\frac{\theta}{1-\theta}$
+\end_inset
+
+ is simply calculated using the simulated posterior values of 
+\begin_inset Formula $\theta$
+\end_inset
+
+, giving the following estimated distribution using R.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=T>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+PlotmyLogOdds<-function(alfa,beta,noDraw,bins){
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes<-matrix(0,noDraw,2)   
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes[,1]<-rbeta(noDraw,alfa,beta)   
+\end_layout
+
+\begin_layout Plain Layout
+
+myRes[,2]<-log(myRes[,1]/(1-myRes[,1]))   
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(2,1))     
+\end_layout
+
+\begin_layout Plain Layout
+
+hist(myRes[,2],bins)   
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(density(myRes[,2]))   
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(1,1)) } 
+\end_layout
+
+\begin_layout Plain Layout
+
+PlotmyLogOdds(16,8,10000,50) 
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 2a)
+\end_layout
+
+\begin_layout Standard
+As a first step a function proportional to the posterior is derived analytically.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+p(\sigma^{2}\mid\mu,\mathbf{x})\propto p(\sigma^{2})p(\mathbf{x}|\mu,\sigma^{2})=\frac{1}{\sigma^{2}}\prod_{n}\left(\frac{1}{x\sqrt{2\pi\sigma^{2}}}e^{-\frac{\left(\ln x-\mu\right)^{2}}{2\sigma^{2}}}\right)\propto
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{1}{\sigma^{2}}\prod_{n}\left(\frac{1}{\sigma}\right)e^{-\sum\frac{\left(\ln x-\mu\right)^{2}}{2\sigma^{2}}}=\frac{1}{\sigma^{2+n}}e^{-\frac{1}{2\sigma^{2}}\cdot\sum_{n}\left(\ln x-\mu\right)^{2}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Given that 
+\begin_inset Formula $\frac{\sum_{n}\left(\ln x-\mu\right)^{2}}{n}=\tau^{2}$
+\end_inset
+
+ and 
+\begin_inset Formula $n=\nu$
+\end_inset
+
+ the expression above can be reduced to the following density kernel.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{1}{\sigma^{2+\nu}}e^{-\frac{\nu\tau^{2}}{2\sigma^{2}}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The scaled 
+\begin_inset Formula $Inv-\chi^{2}$
+\end_inset
+
+ is given by the following pdf.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{(\tau^{2}\nu/2)^{\nu/2}}{\Gamma(\nu/2)}\frac{\exp\left[\frac{-\nu\tau^{2}}{2x}\right]}{x^{1+\nu/2}}\propto\frac{\exp\left[\frac{-\nu\tau^{2}}{2x}\right]}{x^{1+\nu/2}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Setting 
+\begin_inset Formula $x=\sigma^{2}$
+\end_inset
+
+ the two kernels is identical and hence the posterior 
+\begin_inset Formula $p(\sigma^{2}\mid\mu,\mathbf{x})\sim Inv-\chi^{2}(\nu,\tau^{2})$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsubsection*
+Question 2b)
+\end_layout
+
+\begin_layout Standard
+The simulation were implemented in R using the geoR package were the 
+\begin_inset Formula $Inv-\chi^{2}$
+\end_inset
+
+ distribution is implemented.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<message=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# Read in library
+\end_layout
+
+\begin_layout Plain Layout
+
+library(geoR)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining data and parameters
+\end_layout
+
+\begin_layout Plain Layout
+
+income<-c(14,25,45,25,30,33,19,50,34,67)
+\end_layout
+
+\begin_layout Plain Layout
+
+mu<-3.5 
+\end_layout
+
+\begin_layout Plain Layout
+
+t2<-sum((log(income)-mu)^2)/length(income) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Sampling from posterior
+\end_layout
+
+\begin_layout Plain Layout
+
+myPost<-rinvchisq(10000, df=length(income), scale = t2) 
+\end_layout
+
+\begin_layout Plain Layout
+
+mean(myPost)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The theoretical calculation of the expected value of 
+\begin_inset Formula $\sigma^{2}$
+\end_inset
+
+ is done as follows.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+E(\sigma^{2})=\frac{\nu\tau^{2}}{\nu-2}=\frac{\Sexpr{length(income)}\cdot\Sexpr{t2}}{\Sexpr{length(income)}-2}=\Sexpr{(length(income)*t2)/(length(income)-2)}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As expected the theoretical expectation and the mean of the simulated sample
+ are close to each other.
+ The simulated psoterior denisty (both as histogram and as a density estimate)
+ is plotted below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(2,1)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+hist(myPost,100) 
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(density(myPost),main="") 
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(1,1))
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 2c)
+\end_layout
+
+\begin_layout Standard
+The posterior distribution for the gini coefficient, 
+\begin_inset Formula $G$
+\end_inset
+
+ is implemented as a function of 
+\begin_inset Formula $\sigma^{2}$
+\end_inset
+
+ as follows.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+postGiniCoef<-function(myPostValues){   
+\end_layout
+
+\begin_layout Plain Layout
+
+G<-2*pnorm(myPostValues/sqrt(2))-1  
+\end_layout
+
+\begin_layout Plain Layout
+
+# Compute gini coef.
+     
+\end_layout
+
+\begin_layout Plain Layout
+
+return(G) }
+\end_layout
+
+\begin_layout Plain Layout
+
+giniPostVect<-postGiniCoef(myPost) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The resulting posterior distribution of 
+\begin_inset Formula $G$
+\end_inset
+
+ is plotted below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(2,1)) 
+\end_layout
+
+\begin_layout Plain Layout
+
+hist(giniPostVect,100) 
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(density(giniPostVect))
+\end_layout
+
+\begin_layout Plain Layout
+
+par(mfrow=c(1,1))
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 3a)
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+p(\kappa|\mathbf{x})\propto p(\kappa)\cdot p(\mathbf{x}|\kappa)=\lambda e^{-\lambda\kappa}\cdot\prod_{n}\frac{exp[\kappa cos(x-\mu)]}{2\pi I_{0}(\kappa)}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Given that 
+\begin_inset Formula $\lambda=1$
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+p(\kappa|\mathbf{x})\propto e^{-\kappa}\cdot\frac{exp[\kappa\sum_{n}\left(cos(x-\mu)\right)]}{\prod^{n}2\pi I_{0}(\kappa)}=\frac{exp[\kappa\left(\sum_{n}\left(cos(x-\mu)\right)-1\right)]}{(2\pi I_{0}(\kappa))^{n}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since it is not possible to find a normalizing constant directly the function
+ proportional to the posterior above is implemented in R and the normalizing
+ constant is calculated numerically.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining the posterior (without normalizing constant)
+\end_layout
+
+\begin_layout Plain Layout
+
+f<-function(kappa,y,mu){
+\end_layout
+
+\begin_layout Plain Layout
+
+return(exp(kappa * (sum(cos(y-mu))-1))/(2*pi*besselI(kappa,0))^length(y))}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Data and known parameters
+\end_layout
+
+\begin_layout Plain Layout
+
+mu<-2.39 
+\end_layout
+
+\begin_layout Plain Layout
+
+y<-c(-2.44,2.14,2.54,1.83,2.02,2.33,-2.79,2.23,2.07,2.02)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining the grid
+\end_layout
+
+\begin_layout Plain Layout
+
+grid.len<-0.01 
+\end_layout
+
+\begin_layout Plain Layout
+
+kappa.grid<-seq(from=0,to=15,by=grid.len)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Calculating the posterior on the grid
+\end_layout
+
+\begin_layout Plain Layout
+
+post<-f(kappa.grid,y,2.39) 
+\end_layout
+
+\begin_layout Plain Layout
+
+norm.const<-sum(post*grid.len) 
+\end_layout
+
+\begin_layout Plain Layout
+
+post<-post/norm.const
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The resulting posterior distribution is ploted below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=T,echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(kappa.grid,post,type="l",xlab=expression(kappa),ylab="posterior density")
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Question 3b)
+\end_layout
+
+\begin_layout Standard
+To find the mode of the distribution one needs to find the maximum of the
+ posterior function.
+ Since the maximum of the posterior only depends on 
+\begin_inset Formula $\kappa$
+\end_inset
+
+, a function proportional to the posterior can be used to find the value
+ of 
+\begin_inset Formula $\kappa$
+\end_inset
+
+ that maximizes the proportional posterior density.
+ This is done numerically in R the following way:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+mode.post<-optimise(f,c(0,100),y=y,mu=mu,maximum=T)$maximum
+\end_layout
+
+\begin_layout Plain Layout
+
+mode.post
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The posterior density together with the mode can be seen in the following
+ plot.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+<<fig=T,echo=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+plot(kappa.grid,post,type="l",xlab=expression(kappa),ylab="posterior density")
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+abline(v=mode.post,col="red")
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
