@@ -17,14 +17,14 @@ library(msm)
 
 ```{r "Read data",echo=FALSE}
 # Read data
-setwd("~/Desktop/BayesLearn/Assign4")
+setwd("~/Desktop/BayesLearn/")
 
 
 ```
 
-# Question a)
+## Question a)
 
-The Metropolis algorithm (based on a MV normal proposal distribution) were implemented in R in the following way:
+The Metropolis algorithm (based on a MV normal proposal distribution) were implemented in R in the following way (as a block version):
 
 
 ```{r "M-H algo"}
@@ -74,14 +74,14 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,...){
 }
 ```
 
-To be able to get an acceptance rate of 0.3 that has been shown to be a good acceptance proportion $sigma$ in the proposal distribution is increased (by 25 %) or decreased (by 10 %) if the acceptance rate is too low (< ```r 1/20```) or to high (> ```r 11/20```). 
+To be able to get an acceptance rate of 0.3 that has been shown to be a good acceptance proportion $\sigma$ in the proposal distribution is increased (by 25 %) or decreased (by 10 %) if the acceptance rate is too low (< ```r 1/20```) or to high (> ```r 11/20```). 
 
 Initially this function were computed so that if the value was erroneous (i.e. outside [0,1]) the function returned an r of 0. So in this case the erroneous proposed value is rejected by the MH algorithm. 
 
 Why do you need to use the logit transform if we already (after a while) get an acceptance rate of 0.3?
 
 
-# Question b)
+## Question b)
 
 Initially the code given at the home page were used and read into R.
 
@@ -89,7 +89,7 @@ Initially the code given at the home page were used and read into R.
 source("http://www.ida.liu.se/~732A46/2012/Labs/dbetaLogit.R")
 ```
 
-Based on the logit function and the Metropolis algorithm given in exercise a) values of of the posterior were simulated at the logit (real) line an the values of theta were then transfomed back to the unit interval.
+Based on the logit function and the Metropolis algorithm given in exercise a) values of of the posterior were simulated at the logit (real) line an the values of theta were then transfomed back to the unit interval as follows:
 
 
 ```{r}
@@ -104,9 +104,64 @@ logit.mod<-MH.algo(logPostFunc=dbetaLogit,
 # Transform back
 logit.mod <- 1/(1+exp(-logit.mod))
 
-# Plot the values
-plot(logit.mod,type="l")
-
 ```
 
+The plot of the sampled values of $\theta$ can be seen in the following plot.
+
+```{r,echo=FALSE}
+# Plot the values
+plot(logit.mod,type="l")
+```
+
+## Question c)
+
+The data from the previous laboration were loaded into R. 
+
+```{r,echo=FALSE}
+# Load former lab data and code
+setwd("~/Desktop/BayesLearn/Assign3/")
+
+Probit <- 0
+chooseCov <- c(1:16)
+tau <- 10
+source("MainOptimizeSpamMansJosef.R")
+
+setwd("~/Desktop/BayesLearn/")
+```
+
+The logitic model posterior function were altered slightly to be able to use it from the ```ML-algo``` function in exercise a) above. The new likelihood can be seen below:
+
+```{r LogPostLogistic}
+LogPostLogistic <- function(theta,y,X,mu,Sigma){
+  theta<-as.numeric(theta)
+  nPara <- length(theta)
+  linPred <- X%*%theta
+                                      
+  logLik <- sum( linPred*y -log(1 + exp(linPred)))
+  # Likelihood is not finite, stear the optimizer away from here!
+  if (abs(logLik) == Inf) logLik = -20000
+  logPrior <- dmvnorm(theta, matrix(0,nPara,1), Sigma, log=TRUE)
+  return(logLik + logPrior)
+}
+```
+
+Using this likelihood and the function given i a) the (block version) Metropolis function were used and 100000 simulations were done.
+
+
+```{r BetaSim}
+beta.vec<-MH.algo(logPostFunc=LogPostLogistic,
+        start.theta=numeric(16),
+        no.sim=10000,
+        y=y,X=X,mu=mu,Sigma=Sigma)
+```
+
+These simulations had a hard time to sample from the distribution of the $\beta$ vector since the proposed values were evaluated as a whole block, with the same prosed distribution. The peoblem with this approach can be seen in the following two plots.
+
+
+```{r,echo=FALSE}
+plot(beta.vec[,8],type="l")
+plot(beta.vec[,10],type="l")
+```
+
+To conter this problem a new MH algorith were created were the posterior is not evaluated for the whole block of parameter values but cycling through each parameter as is done in the gibbs sampler.
 
