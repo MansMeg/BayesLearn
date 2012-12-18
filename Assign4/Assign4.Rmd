@@ -28,15 +28,10 @@ source("fun.extra.R")
 
 ## Question a)
 
-The Metropolis algorithm (based on a MV normal proposal distribution) were implemented in R in the following way (as a block version):
+The Metropolis algorithm (with a multivariate normal proposal distribution) were implemented generically in R in the following way:
 
 ```{r "M-H algo"}
-# The Metropolis-Hasting algorithm with the following inputs:
-# logPostFunc: Posterior function (prop to density)
-# start.theta: vector of starting values for parameters
-# no.sim: Number of draws
-
-MH.algo<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
+MH.algo<-function(logPostFunc,start.theta,no.sim,sig.start=diag(length(start.theta)),burn.in=2000,...){
   library(mvtnorm)
   # Create matrix to store results
   par.draws <- matrix(0,ncol=length(start.theta),nrow=(no.sim+burn.in))
@@ -44,10 +39,10 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
   
   # Set starting values
   par.draws[1,] <- start.theta
-  sig<-diag(ncol(par.draws))
+  sig<-sig.start
   no.accept<-0
-  
-  
+  c2<-1
+    
   # Adpative phase, sig is now tunned:
   for (j in 2:burn.in){
     # Propose theta
@@ -70,8 +65,8 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
     
     # Changing proposing sigma to reach an acceptance prob of 0.3
     if(j %% 20 == 0){
-      if(no.accept < 2){sig<-0.9*sig}
-      if(no.accept > 11){sig<-1.25*sig}
+      if(no.accept < 2){c2<-c2*0.8;sig<-c2*sig.start}
+      if(no.accept > 11){c2<-c2*1.15;sig<-c2*sig.start}
       no.accept<-0
     }  
   }
@@ -98,20 +93,23 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
     }
     
   }
+  
+  print(paste("Acceptance proportion:",round(no.accept/no.sim,3)))
+  print(paste("Tuning constant (c):",round(c2,3)))
   return(par.draws)
 }
 ```
 
-To be able to get an acceptance rate of 0.3 that has been shown to be a good acceptance proportion $\sigma$ in the proposal distribution is increased (by 25 %) or decreased (by 10 %) if the acceptance rate is too low (< ```r 1/20```) or to high (> ```r 11/20```). 
+To be able to get an acceptance rate of 0.3 $c \cdot \Sigma$ in the proposal distribution is increased (by 25 %) or decreased (by 10 %) if the acceptance rate is too high (> ```r 11/20```) or to low (< ```r 1/20```). 
 
-Initially this function were computed so that if the value was erroneous (i.e. outside [0,1]) the function returned an r of 0. So in this case the erroneous proposed value is rejected by the MH algorithm. 
+Initially this function were computed so that if the value was erroneous (i.e. outside [0,1]) the function returned an $r$ of 0. So in this case the erroneous proposed value is rejected by the MH algorithm. 
 
-Why do you need to use the logit transform if we already (after a while) get an acceptance rate of 0.3?
+Why do you need to use the logit transform if we already (after a while) get an acceptance rate of 0.3 by simply rejecting proposed values that are incorrect (or using a truncated normal distribution on [0,1]?
 
 
 ## Question b)
 
-Initially the code given at the home page were used and read into R.
+The code given at the home page were used and read into R the following way.
 
 ```{r}
 source("http://www.ida.liu.se/~732A46/2012/Labs/dbetaLogit.R")
@@ -119,45 +117,41 @@ source("http://www.ida.liu.se/~732A46/2012/Labs/dbetaLogit.R")
 
 Based on the logit function and the Metropolis algorithm given in exercise a) values of of the posterior were simulated at the logit (real) line an the values of theta were then transfomed back to the unit interval as follows:
 
-
 ```{r}
 # Metropolis simulation
 logit.mod<-MH.algo(logPostFunc=dbetaLogit,
               start.theta=0.5,
-              no.sim=1000,
+              no.sim=sim,
               shape1 = 10 + 3,
               shape2 = 3 + 3,
               log=T)
 
 # Transform back
 logit.mod <- 1/(1+exp(-logit.mod))
-
 ```
 
 The plot of the sampled values of $\theta$ can be seen in the following plot.
 
-```{r,echo=FALSE}
+```{r,echo=FALSE,fig.cap="Sampled values of \theta"}
 # Plot the values
 plot(logit.mod,type="l")
 ```
 
 ## Question c)
 
-The data from the previous laboration were loaded into R. 
+The data and code from the previous laboration (```MainOptimizeSpamMansJosef.R```) were loaded into R.
 
 ```{r,echo=FALSE}
 # Load former lab data and code
 setwd("~/Desktop/BayesLearn/Assign3/")
-
 Probit <- 0
 chooseCov <- c(1:16)
 tau <- 10
 source("MainOptimizeSpamMansJosef.R")
-
 setwd("~/Desktop/BayesLearn/")
 ```
 
-The logitic model posterior function were altered slightly to be able to use it from the ```ML-algo``` function in exercise a) above. The new likelihood can be seen below:
+The logitic model posterior function were altered slightly to be able to use it from the ```ML.algo``` function in exercise a) above. The new likelihood can be seen below:
 
 ```{r LogPostLogistic}
 LogPostLogistic <- function(theta,y,X,mu,Sigma){
@@ -173,8 +167,7 @@ LogPostLogistic <- function(theta,y,X,mu,Sigma){
 }
 ```
 
-Using this likelihood and the function given i a) the (block version) Metropolis function were used and ```r sim``` simulations were done.
-
+Using this likelihood and the function given i a) the Metropolis function (```MH.algo```) were used and ```r sim``` simulations were done.
 
 ```{r BetaSim}
 beta.vec<-MH.algo(logPostFunc=LogPostLogistic,
@@ -183,14 +176,20 @@ beta.vec<-MH.algo(logPostFunc=LogPostLogistic,
         y=y,X=X,mu=mu,Sigma=Sigma)
 ```
 
-These simulations had a hard time to sample from the distribution of the $\beta$ vector since the proposed values were evaluated as a whole block, with the same prosed distribution. The peoblem with this approach can be seen in the following two plots.
-
+These simulations had a hard time to sample from the distribution of the $\beta$ vector since the proposed values were evaluated as a whole block, where the propsal distribution $\Sigma$ were the identy matrix with some tuning constant c. 
+The problem with this approach can be seen in the following plots.
 
 ```{r,echo=FALSE,warning=FALSE}
 plot.many(beta.vec[-(1:2000),],bins=20,sameAxis=F)
 ```
 
-To conter this problem a new MH algorith were created where instead of a identity matrix is used for the proposal distribution, the maximum and the hessian of the liklihood is found using the ```optim``` function. The maximum is used as the starting values and the $-H^{-1}$ is used as the covariance ($\Sigma$) the proposal distribution. This is implemented in R the following way:
+As one can see there is quite som problem with high rejection probabilities and it seems that few parameters has converged to a mixing distribution.
+
+To counter this problem with the the old Metropolis function a new metroplois function were created where minus the inverse of the hessian is used for as the proposal distribution. The maximum  and the hessian of the liklihood is found using the BFGS algorithm in the ```optim``` function in R. The maximum is used as the starting values and the $-H^{-1}$ is used as $\Sigma$ in the multivariate normal proposal distribution. 
+
+As before a burn in of 2000 simulations is used to tune the proposal distribution to get an acceptance rate of 0.3. Then this tuning constant c is then used in the following draws from the posterior (but is then fixed).
+
+This is implemented in R the following way:
 
 ```{r}
 MH.algo.hess<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
@@ -261,6 +260,7 @@ MH.algo.hess<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
 }
 ```
 
+This Metropolis function is used to draw a sample from the posterior distribution the following way. The function also prints the acceptance proportion of the sampling draws as well as the tuning constant c used.
 
 ```{r}
 beta.vec<-MH.algo.hess(logPostFunc=LogPostLogistic,
@@ -269,8 +269,14 @@ beta.vec<-MH.algo.hess(logPostFunc=LogPostLogistic,
                   y=y,X=X,mu=mu,Sigma=Sigma)
 ```
 
+As can bee seen from the output above the acceptance proportion is close to 0.3.
+
+In the plots below, the mixing behaviour of $\beta$ parameters is much better when the proposal distribution is used with the mode as starting values and the minus inverse hessian as proposal $\Sigma$.
 
 ```{r,echo=FALSE,warning=FALSE}
 plot.many(beta.vec[-(1:2000),],bins=20,sameAxis=F)
 ```
-hej
+
+
+
+
