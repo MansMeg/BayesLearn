@@ -5,6 +5,10 @@
 # Options
 options(width=65)
 
+# Set WD
+setwd("~/Desktop/BayesLearn/")
+sim<-10000
+
 # Libraries
 library(ggplot2)
 library(pander)
@@ -12,12 +16,12 @@ library(mvtnorm)
 library(geoR)
 library(msm)
 
+source("fun.extra.R")
 
 ```
 
 ```{r "Read data",echo=FALSE}
 # Read data
-setwd("~/Desktop/BayesLearn/")
 
 
 ```
@@ -26,17 +30,16 @@ setwd("~/Desktop/BayesLearn/")
 
 The Metropolis algorithm (based on a MV normal proposal distribution) were implemented in R in the following way (as a block version):
 
-
 ```{r "M-H algo"}
 # The Metropolis-Hasting algorithm with the following inputs:
 # logPostFunc: Posterior function (prop to density)
 # start.theta: vector of starting values for parameters
 # no.sim: Number of draws
 
-MH.algo<-function(logPostFunc,start.theta,no.sim,...){
+MH.algo<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
   library(mvtnorm)
   # Create matrix to store results
-  par.draws <- matrix(0,ncol=length(start.theta),nrow=no.sim)
+  par.draws <- matrix(0,ncol=length(start.theta),nrow=(no.sim+burn.in))
   propose.theta<-numeric(length(start.theta))
   
   # Set starting values
@@ -44,17 +47,19 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,...){
   sig<-diag(ncol(par.draws))
   no.accept<-0
   
-  for (j in 2:no.sim){
+  
+  # Adpative phase, sig is now tunned:
+  for (j in 2:burn.in){
     # Propose theta
     propose.theta <- rmvnorm(1,mean=par.draws[j-1,],sigma=sig)
-  
+    
     # Calculate r
     suppressWarnings(
       log.r <- logPostFunc(propose.theta, ...) - 
         logPostFunc(par.draws[j-1,], ...)
     )
     if(is.nan(log.r)){log.r<--Inf}
-
+    
     # Accept/Reject
     if (runif(1) < min(exp(log.r),1) ){
       par.draws[j,]<-propose.theta
@@ -69,6 +74,29 @@ MH.algo<-function(logPostFunc,start.theta,no.sim,...){
       if(no.accept > 11){sig<-1.25*sig}
       no.accept<-0
     }  
+  }
+  
+
+  # Fixed phase, sig is now fixed:
+  for (j in (burn.in+1):(no.sim+burn.in)){
+    # Propose theta
+    propose.theta <- rmvnorm(1,mean=par.draws[j-1,],sigma=sig)
+    
+    # Calculate r
+    suppressWarnings(
+      log.r <- logPostFunc(propose.theta, ...) - 
+        logPostFunc(par.draws[j-1,], ...)
+    )
+    if(is.nan(log.r)){log.r<--Inf}
+    
+    # Accept/Reject
+    if (runif(1) < min(exp(log.r),1) ){
+      par.draws[j,]<-propose.theta
+      no.accept<-no.accept+1
+    }else{
+      par.draws[j,]<-par.draws[j-1,]
+    }
+    
   }
   return(par.draws)
 }
@@ -145,23 +173,104 @@ LogPostLogistic <- function(theta,y,X,mu,Sigma){
 }
 ```
 
-Using this likelihood and the function given i a) the (block version) Metropolis function were used and 100000 simulations were done.
+Using this likelihood and the function given i a) the (block version) Metropolis function were used and ```r sim``` simulations were done.
 
 
 ```{r BetaSim}
 beta.vec<-MH.algo(logPostFunc=LogPostLogistic,
         start.theta=numeric(16),
-        no.sim=10000,
+        no.sim=sim,
         y=y,X=X,mu=mu,Sigma=Sigma)
 ```
 
 These simulations had a hard time to sample from the distribution of the $\beta$ vector since the proposed values were evaluated as a whole block, with the same prosed distribution. The peoblem with this approach can be seen in the following two plots.
 
 
-```{r,echo=FALSE}
-plot(beta.vec[,8],type="l")
-plot(beta.vec[,10],type="l")
+```{r,echo=FALSE,warning=FALSE}
+plot.many(beta.vec[-(1:2000),],bins=20,sameAxis=F)
 ```
 
-To conter this problem a new MH algorith were created were the posterior is not evaluated for the whole block of parameter values but cycling through each parameter as is done in the gibbs sampler.
+To conter this problem a new MH algorith were created where instead of a identity matrix is used for the proposal distribution, the maximum and the hessian of the liklihood is found using the ```optim``` function. The maximum is used as the starting values and the $-H^{-1}$ is used as the covariance ($\Sigma$) the proposal distribution. This is implemented in R the following way:
+
+```{r}
+MH.algo.hess<-function(logPostFunc,start.theta,no.sim,burn.in=2000,...){
+  library(MASS)
+  
+  # Create matrix to store results
+  par.draws <- matrix(0,ncol=length(start.theta),nrow=(no.sim+burn.in))
+  propose.theta<-numeric(length(start.theta))
+  
+  # Set starting values/proposal distribution
+  no.accept<-0
+  optim.res<-optim(propose.theta,logPostFunc,gr=NULL,...,method=c("BFGS"),control=list(fnscale=-1),hessian=TRUE)
+  par.draws[1,] <- optim.res$par
+  sig <- sig.start<- -solve(optim.res$hessian)
+  c2<-1
+  
+  # Adpative phase, sig is now tuned:
+  for (j in 2:burn.in){
+    # Propose theta
+    propose.theta <- rmvnorm(1,mean=par.draws[j-1,],sigma=sig)
+    
+    # Calculate r
+    suppressWarnings(
+      log.r <- logPostFunc(propose.theta, ...) - 
+        logPostFunc(par.draws[j-1,], ...)
+    )
+    if(is.nan(log.r)){log.r<--Inf}
+    
+    # Accept/Reject
+    if (runif(1) < min(exp(log.r),1) ){
+      par.draws[j,]<-propose.theta
+      no.accept<-no.accept+1
+    }else{
+      par.draws[j,]<-par.draws[j-1,]
+    }
+    
+    # Changing proposing sigma to reach an acceptance prob of 0.3
+    if(j %% 20 == 0){
+      if(no.accept < 2){c2<-c2*0.8;sig<-c2*sig.start}
+      if(no.accept > 11){c2<-c2*1.15;sig<-c2*sig.start}
+      no.accept<-0
+    }
+  }
+    
+  for (j in (burn.in+1):(no.sim+burn.in)){
+
+    # Propose theta
+    propose.theta <- rmvnorm(1,mean=par.draws[j-1,],sigma=sig)
+
+    # Calculate r
+    suppressWarnings(
+      log.r <- logPostFunc(propose.theta, ...) - 
+        logPostFunc(par.draws[j-1,], ...)
+    )
+    if(is.nan(log.r)){log.r<--Inf}
+    
+    # Accept/Reject
+    if (runif(1) < min(exp(log.r),1) ){
+      par.draws[j,]<-propose.theta
+      no.accept<-no.accept+1
+    }else{
+      par.draws[j,]<-par.draws[j-1,]
+    }
+  }
+  print(paste("Acceptance proportion:",round(no.accept/no.sim,3)))
+  print(paste("Tuning constant (c):",round(c2,3)))
+  return(par.draws)
+}
+```
+
+
+```{r}
+beta.vec<-MH.algo.hess(logPostFunc=LogPostLogistic,
+                  start.theta=numeric(16),
+                  no.sim=sim,
+                  y=y,X=X,mu=mu,Sigma=Sigma)
+```
+
+
+```{r,echo=FALSE,warning=FALSE}
+plot.many(beta.vec[-(1:2000),],bins=20,sameAxis=F)
+```
 
