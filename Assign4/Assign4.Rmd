@@ -273,4 +273,4 @@ beta.vec<-MH.algo.hess(logPostFunc=LogPostLogistic,
 ```{r,echo=FALSE,warning=FALSE}
 plot.many(beta.vec[-(1:2000),],bins=20,sameAxis=F)
 ```
-
+hej
